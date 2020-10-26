@@ -1,1 +1,3 @@
-# inteligencia-artificial-tp
+# TP Inteligencia Artificial
+
+## Integrantes

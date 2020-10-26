@@ -1,17 +1,19 @@
-from simpleai.search import SearchProblem, breadth_first, depth_first, uniform_cost
+from simpleai.search import (
+    SearchProblem, 
+    breadth_first, 
+    depth_first, 
+    uniform_cost,
+    astar,
+    iterative_limited_depth_first
+)
+
 from simpleai.search.viewers import WebViewer, BaseViewer
 
-INITIAL_STATE = (
-    (
-        ('c1', 'rafaela', 0,()), 
-        ('c2', 'rafaela', 0, ())
-    ), 
-    ('p1','p2', 'p3')
-    )    
 
 #action = ('truck','destino', 'costo', paquete)
+PACKAGES = {}
+TRUCKS = {}
 
-GOAL_STATE = ()
 
 MAP = {
     'rafaela': [('susana', 10),('esperanza', 70),('lehmann',8)],
@@ -27,22 +29,22 @@ MAP = {
     'santo_tome': [('angelica', 85),('sauce_viejo', 15),('santa_fe',5)],
     'sauce_viejo': [('santo_tome',15)],
 }
-
-PACKAGES = {
-    'p1':('rafaela', 'susana'),
-    'p2':('susana', 'lehmann'),
-    'p3':('esperanza', 'rafaela'),
-}
-
-TRUCKS = {
-    'c1': 1.5,
-    'c2': 2.0
-}
+FUEL = ['rafaela','santa_fe']
 
 class Trucks(SearchProblem):
     def is_goal(self, state):
-        return False
-    
+        isGoal = False
+        if(len(state[1]) > 0):
+            return False
+        
+        for truck in state[0]:
+            if truck[1] in FUEL:
+                isGoal = True
+            else:
+                isGoal = False
+
+        return isGoal
+
     def actions(self, state):
         trucks, packages = state
         available_actions = []
@@ -52,11 +54,11 @@ class Trucks(SearchProblem):
             for city in MAP[truck[1]]:
                 if TRUCKS[truck[0]] >= (truck[2] + (city[1]/100)):
                     available_actions.append((truck[0], city[0], (city[1]/100), truck[3]))
-                
+            print(PACKAGES)
             # Cargar paquete
             for pack in packages:
-                if truck[1] == PACKAGES[pack]:
-                    available_actions.append((truck[0], truck[1], 0, [pack]))
+                if truck[1] == PACKAGES[pack][0]:
+                    available_actions.append((truck[0], truck[1], 0, tuple([pack])))
 
         return available_actions
 
@@ -84,8 +86,13 @@ class Trucks(SearchProblem):
                     state_truck_modifiable[3] = tuple(row for row in state_truck_package_modifiable)
                 else:
                     state_truck_modifiable[1] = city
-                    state_truck_modifiable[2] += cost
-                    state_truck_modifiable = tuple(row for row in state_truck_modifiable) 
+                    
+                    if city in FUEL:
+                        state_truck_modifiable[2] = 0
+                    else:
+                        state_truck_modifiable[2] += cost
+
+                    state_truck_modifiable = tuple(row for row in state_truck_modifiable)
 
                 state_modifiable[0] = list(pile for pile in state_modifiable[0])
                 state_modifiable[0][index] = state_truck_modifiable
@@ -101,8 +108,68 @@ class Trucks(SearchProblem):
         return action[2]
 
     def heuristic(self, state):
-        return 1
+        return len(state[1])
 
         
-problem = Trucks(INITIAL_STATE)
-result = breadth_first(problem, graph_search=True, viewer=WebViewer())
+
+
+def planear_camiones(metodo, camiones, paquetes):
+    total_packages = []
+    total_trucks = []
+
+    for package in paquetes:
+        PACKAGES[package[0]] = (package[1], package[2])
+        total_packages.append(package[0])
+
+    for truck in camiones:
+        TRUCKS[truck[0]] = truck[2]
+        total_trucks.append((truck[0], truck[1], 0, ()))
+
+    INITIAL_STATE = (
+        tuple(pile for pile in total_trucks),
+        tuple(pile for pile in total_packages),
+    )
+   # print(INITIAL_STATE)
+   # print("_________")
+   # print(TRUCKS)
+   # print("_________")
+   # print(PACKAGES)
+
+    METHODS = {
+        'breadth_first': breadth_first,
+        'depth_first': depth_first,
+        'iterative_limited_depth_first': iterative_limited_depth_first,
+        'uniform_cost': uniform_cost,
+        'astar': astar,
+    }
+
+    problem = Trucks(INITIAL_STATE)
+    result = METHODS[metodo](problem, graph_search=True)
+    #result = METHODS[metodo](problem)
+    
+    itinerario = []
+    for action, _ in result.path():
+        if action is not None:
+            if action[2] > 0:
+                itinerario.append(action)
+
+    print(itinerario)
+    return itinerario
+
+
+if __name__ == '__main__': 
+    itinerario = planear_camiones(
+    # método de búsqueda a utilizar. Puede ser: astar, breadth_first, depth_first, uniform_cost o greedy
+    metodo="breadth_first",
+    camiones=[
+        # id, ciudad de origen, y capacidad de combustible máxima (litros)
+        ('c_normal', 'rafaela', 1.5),
+    ],
+    paquetes=[
+        # id, ciudad de origen, y ciudad de destino
+        ('p_normal', 'rafaela', 'lehmann')
+    ],
+    )
+    print(itinerario)
+
+
