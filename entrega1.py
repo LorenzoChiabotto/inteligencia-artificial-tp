@@ -10,7 +10,6 @@ from simpleai.search import (
 from simpleai.search.viewers import WebViewer, BaseViewer
 
 
-#action = ('truck','destino', 'costo', paquete)
 PACKAGES = {}
 TRUCKS = {}
 
@@ -29,7 +28,7 @@ MAP = {
     'santo_tome': [('angelica', 85),('sauce_viejo', 15),('santa_fe',5)],
     'sauce_viejo': [('santo_tome',15)],
 }
-FUEL = ['rafaela','santa_fe']
+HEADQUARTERS = ['rafaela','santa_fe']
 
 class Trucks(SearchProblem):
     def is_goal(self, state):
@@ -38,14 +37,22 @@ class Trucks(SearchProblem):
             return False
         
         for truck in state[0]:
-            if truck[1] in FUEL:
+            if truck[1] in HEADQUARTERS:
                 isGoal = True
             else:
-                isGoal = False
+                return False
+            
+            for package in truck[3]:
+                if PACKAGES[package][1] == truck[1]:
+                    isGoal == True
+                else:
+                    return False
 
         return isGoal
 
     def actions(self, state):
+        #action = ('truck','destination', 'cost', package)
+
         trucks, packages = state
         available_actions = []
         
@@ -54,7 +61,6 @@ class Trucks(SearchProblem):
             for city in MAP[truck[1]]:
                 if TRUCKS[truck[0]] >= (truck[2] + (city[1]/100)):
                     available_actions.append((truck[0], city[0], (city[1]/100), truck[3]))
-            print(PACKAGES)
             # Cargar paquete
             for pack in packages:
                 if truck[1] == PACKAGES[pack][0]:
@@ -66,10 +72,6 @@ class Trucks(SearchProblem):
         #convert tuples to list
         state_modifiable = list(pile for pile in state)
         truck, city, cost, package = action
-
-        # Trucks list -> state_modifiable[0]
-
-        # Package list -> state_modifiable[1]
 
         for index, state_truck in enumerate(state_modifiable[0]):
             if state_truck[0] == truck:
@@ -87,7 +89,7 @@ class Trucks(SearchProblem):
                 else:
                     state_truck_modifiable[1] = city
                     
-                    if city in FUEL:
+                    if city in HEADQUARTERS:
                         state_truck_modifiable[2] = 0
                     else:
                         state_truck_modifiable[2] += cost
@@ -113,9 +115,11 @@ class Trucks(SearchProblem):
 
 
     def cost(self, state1,action, state2):
+        # Costo en combustible (cargar un paquete cuesta 0)
         return action[2]
 
     def heuristic(self, state):
+        # La cantidad de paquetes que falta cargar
         return len(state[1])
 
         
@@ -137,11 +141,6 @@ def planear_camiones(metodo, camiones, paquetes):
         tuple(pile for pile in total_trucks),
         tuple(pile for pile in total_packages),
     )
-   # print(INITIAL_STATE)
-   # print("_________")
-   # print(TRUCKS)
-   # print("_________")
-   # print(PACKAGES)
 
     METHODS = {
         'breadth_first': breadth_first,
@@ -152,16 +151,14 @@ def planear_camiones(metodo, camiones, paquetes):
     }
 
     problem = Trucks(INITIAL_STATE)
-    result = METHODS[metodo](problem, graph_search=True)
     #result = METHODS[metodo](problem)
+    result = METHODS[metodo](problem, graph_search=True)
     
     itinerario = []
     for action, _ in result.path():
         if action is not None:
             if action[2] > 0:
                 itinerario.append(action)
-
-    print(itinerario)
     return itinerario
 
 
