@@ -91,6 +91,14 @@ class Trucks(SearchProblem):
                         state_truck_modifiable[2] = 0
                     else:
                         state_truck_modifiable[2] += cost
+                    
+                    for package in state_truck[3]:
+                        if PACKAGES[package][1] == city:
+                            state_truck_package_modifiable = list(row for row in state_truck_modifiable[3])
+                            state_truck_package_modifiable.remove(package)
+                            state_truck_modifiable[3] = tuple(row for row in state_truck_package_modifiable)
+
+
 
                     state_truck_modifiable = tuple(row for row in state_truck_modifiable)
 
